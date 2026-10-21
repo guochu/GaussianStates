@@ -64,6 +64,32 @@ end
     @test entropy(s0) ≈ 2 * log(2) atol = 1e-8
 end
 
+@testset "Gibbs：零模自动规范固定" begin
+    # PHS 规范形式 + 零模 + 零空间被正交混合 ⟹ 数值本征矢与 PH 伴模不配对
+    #（旧实现此处抛 ArgumentError）。零空间 N = N₊⊕N₋ 内取 v=(e₊+e₋)/√2 恢复
+    # 配对；割熵与规范选择无关（零模占据 ½，doubled sector 恒为最大纠缠 Bell 对，
+    # 参考 F_utilities Purification 的逐模 √(ν(1−ν)) 闭式——同样对简并免疫）。
+    r0 = MersenneTwister(20241022)
+    h0 = diagm([1.0, 0.0])
+    M0 = Matrix{Float64}([h0 0*h0; 0*h0 -transpose(h0)])   # 谱 ±1, 0, 0（一个零模）
+    S = GaussianStates._nambu_swap(2)
+    for _ in 1:3
+        U = Matrix(qr(randn(r0, 2, 2)).Q); V = Matrix(qr(randn(r0, 2, 2)).Q)
+        W = [U+V U-V; U-V U+V] ./ sqrt(2)     # 正交且与 S 交换 ⟹ M = W·M0·Wᵀ 保 PHS
+        M = Matrix{Float64}(W * M0 * transpose(W))
+        @test norm(M + S * conj(M) * S) < 1e-12          # 确认 PHS 保持
+        s = FermionicGaussianState(M)
+        Γd = GaussianStates.osee_covariance(s)           # 不再抛错
+        @test maximum(abs, Γd^2 + I) < 1e-10             # 纯态
+        for modes in ([1], [2])
+            @test osee(s, vcat(modes, 2 .+ modes)) ≈
+                  dense_osee_fermionic_gibbs(M, modes) atol = 1e-10
+        end
+    end
+    # 注：各 trial 的 M 是 canonical 等价类的不同表示（不同物理态），
+    # 割熵本就不同；每割 fast == dense 已是充分检验。
+end
+
 @testset "稠密仲裁：Gibbs 分支（复 h,g；Γ/Γd 实数性）" begin
     # 对任意态 γ_aγ_b − δ_ab 反厄米 ⟹ 期望纯虚 ⟹ i⟨γ_aγ_b⟩ 严格实，
     # 与 bdg 是否复无关。此处用复厄米 h + 复 g 实证（对照稠密 ρ）。

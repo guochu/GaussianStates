@@ -101,8 +101,8 @@ function _gammad(s::FermionicGaussianState)
     _ispairing(W) && return s.Γd = _gamma(s)
     g = _fermionic_gibbs_doubled_gamma(eigen(Hermitian(_canonical_bdg(W))))
     g === nothing && throw(ArgumentError(
-        "Gibbs 分支的 OSEE 需要 BdG 谱不含（近）零模（简并本征矢无法配对）；" *
-        "当前 bdg 不满足。entropy（偏迹熵）不受影响"))
+        "Gibbs 分支的 OSEE 构造失败（零模已尝试零空间规范固定后仍不收敛的" *
+        "数值病理）。entropy（偏迹熵）不受影响"))
     return s.Γd = g
 end
 
@@ -272,7 +272,17 @@ end
 #   交叉配对块 F_AB = −(V₊ t̃ V₊† + V₋ t̃ V₋†)，t̃_k = 1/(2cosh λ_k)
 #   交叉 ⟨c†d⟩ = 0（U₊ᵀU₋ 的 c-c 块为零，规范结构保证）
 # 公式对简并本征空间的基选择规范不变（t̃ 在简并块上为常数）。
-# 返回 4m×4m Majorana 协方差；谱含（近）零模使简并本征矢无法配对时返回 nothing。
+# 返回 4m×4m Majorana 协方差。
+#
+# （近）零模 λ_k = 0：PH 伴模与原模**同本征值**，数值 eig 在零空间内返回任意
+# 正交基，配对关系 ⟨u_k, S₀·conj(u_l)⟩ = 0 破坏（𝒰 = [U₊, U₋] 不再幂等）。
+# 此时在零空间 N（S₀ 共轭下不变：N = N₊ ⊕ N₋ 对合的 ±不动子空间）内取规范对
+# v = (e₊ + e₋)/√2，⟨v, S₀·conj(v)⟩ = ‖e₊‖² − ‖e₋‖² = 0 恢复配对。规范选择
+# 不影响任何割熵：零模占据恒 ½，doubled sector 恒为最大纠缠 Bell 对，
+# Schmidt 谱与配对方式无关（参考 F_utilities 的 Purification——逐模 √(ν(1−ν))
+# 闭式同样只用占据谱、对简并免疫）。非 PHS 的一般厄米输入零空间与 PH 像
+# 自动正交，配对天然成立，不触发本修复；规范固定后仍不幂等的其它数值病理
+# 才返回 nothing。
 # ========================================================================== #
 
 function _nambu_swap(m::Int)
@@ -294,15 +304,24 @@ function _fermionic_gibbs_doubled_gamma(E::Eigen)
     G_A = Gψ[1:m, 1:m]                                  # ⟨c†c⟩
     F_A = Gψ[m+1:N, 1:m]                                # ⟨cc⟩
     # 交叉配对块：+λ 半谱与 PH 伴模
-    perm = sortperm(E.values, rev=true)[1:m]             # +λ 半谱（BdG ± 对称）
+    perm = sortperm(E.values, rev=true)                 # +λ 半谱（BdG ± 对称）
     λ = E.values[perm]
-    U₊ = E.vectors[:, perm]                             # Nambu 本征矢（2m×m）
-    U₋ = _nambu_swap(m) * conj(U₊)                      # f_k† 的系数列（PH 伴模）
-    𝒰 = hcat(U₊, U₋)
-    opnorm(𝒰' * 𝒰 - I, Inf) ≤ 1e-8 || return nothing   # （近）零模：无法配对
+    Uall = copy(E.vectors[:, perm])
+    S = _nambu_swap(m)
+    # （近）零模的任意基使 PH 配对破坏时：零空间内规范固定（见上方注释）
+    𝒰 = hcat(Uall[:, 1:m], S * conj(Uall[:, 1:m]))
+    if opnorm(𝒰' * 𝒰 - I, Inf) > 1e-8
+        zidx = findall(abs.(λ[1:m]) .< 1e-8)
+        (isempty(zidx) || !_gaugefix_zeromodes!(Uall, zidx, S)) &&
+            return nothing
+        𝒰 = hcat(Uall[:, 1:m], S * conj(Uall[:, 1:m]))
+        opnorm(𝒰' * 𝒰 - I, Inf) ≤ 1e-8 || return nothing   # 其它数值病理仍拒绝
+    end
+    U₊ = Uall[:, 1:m]                                   # Nambu 本征矢（2m×m）
+    U₋ = S * conj(U₊)                                   # f_k† 的系数列（PH 伴模）
     V₊ = U₊[1:m, :]                                     # c_i = Σ V₊[i,k] f_k + V₋[i,k] f_k†
     V₋ = U₋[1:m, :]
-    t̃ = 1 ./ (2 .* cosh.(λ))
+    t̃ = 1 ./ (2 .* cosh.(λ[1:m]))
     F_AB = -(V₊ * Diagonal(t̃) * V₊' + V₋ * Diagonal(t̃) * V₋')
     # 交叉 ⟨c_i†d_j⟩ 复数时非零（τ-演化推导 + 稠密仲裁；实数时 H ≡ 0 退化为旧结论）
     H_AB = V₊ * Diagonal(t̃) * transpose(V₋) + V₋ * Diagonal(t̃) * transpose(V₊)
@@ -318,6 +337,26 @@ function _fermionic_gibbs_doubled_gamma(E::Eigen)
     F[1:m, m+1:2m] = F_AB
     F[m+1:2m, 1:m] = -transpose(F_AB)
     return _majorana_covariance(G, F)
+end
+
+# 零空间 N = N₊ ⊕ N₋（S 共轭对合的 ±不动子空间）内取规范对，恢复 PH 配对。
+# cols 给出 N 的零模本征矢列；生成集 [u_i, S·conj(u_i)]（PHS 下 S·conj(u) ∈ N）
+# 经 QR 正交化后按 S 共轭的 ±1 本征组合投影，N₊/N₋ 各取 k 维正交基配对
+# v = (e₊+e₋)/√2（N₊⊥N₋ ⟹ ⟨v,S·conj(v)⟩ = 0 且各 v 正交）。PHS 破坏
+#（S·conj(N) ⊄ N，一般厄米输入）时投影秩不足，由上层幂等检查兜底拒绝。
+function _gaugefix_zeromodes!(Uall::Matrix{ComplexF64}, cols::Vector{Int},
+                              S::Matrix{ComplexF64})
+    k = length(cols)
+    Q = Matrix(qr(hcat(Uall[:, cols], S * conj(Uall[:, cols]))).Q)
+    P₊ = (Q .+ S * conj(Q)) ./ 2              # N₊ 投影（S 共轭 +1 不动子空间）
+    P₋ = (Q .- S * conj(Q)) ./ 2              # N₋ 投影（−1 不动子空间）
+    E₊ = Matrix(qr(P₊).Q)[:, 1:k]
+    E₋ = Matrix(qr(P₋).Q)[:, 1:k]
+    for j in 1:k
+        # t̃(λ≈0) = 1/(2cosh 0) = 1/2 不变；零模占据 ½ ⟹ Bell 对，熵与规范无关
+        Uall[:, cols[j]] = (E₊[:, j] + E₋[:, j]) ./ sqrt(2)
+    end
+    return true
 end
 
 # ========================================================================== #
@@ -345,8 +384,9 @@ GrassmannMPS bond 熵同一约定；注意它与 plain 张量 reshape 的
 operator-Schmidt 在非连续割上不同。
 
 Gibbs 分支的谱公式在规范 BdG 形式下推导；任意厄米输入构造态时已自动规范化
-（与原矩阵只差常数，不改变态），无需手动处理。仅当谱含（近）零模使简并
-本征矢无法配对时，调用报 `ArgumentError`（`entropy` 不受影响）。
+（与原矩阵只差常数，不改变态），无需手动处理。谱含（近）零模时自动在零空间
+内做规范固定（N = N₊⊕N₋，配对 v=(e₊+e₋)/√2），任意割熵不受规范选择影响；
+仅规范固定后仍失败的极端数值病理才报 `ArgumentError`。
 """
 function osee(s::FermionicGaussianState, sites::AbstractVector{<:Integer}; α::Real=1)
     α > 0 || throw(ArgumentError("Rényi 阶数 α 必须为正"))

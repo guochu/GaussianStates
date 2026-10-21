@@ -270,8 +270,9 @@ B 同侧块 = Z · X · Z
 - `sites` 是 **doubled 空间模式指标**：Gibbs/玻色为 ket 拷贝 1..m 与
   bra 拷贝 m+1..2m，物理 site p 的割 = `[p, m+p]`；纯配对为 Grassmann
   模式本身（a₁..aₙ, ā₁..āₙ），site p 的割 = `[p, n+p]`。
-- Gibbs 分支要求 PH 对称且谱无零模，否则调用报 `ArgumentError`
-  （`entropy` 不受影响）。
+- Gibbs 分支谱含（近）零模时自动做零空间规范固定（配对恢复），任意割熵
+  不受规范选择影响（零模占据恒 ½，doubled sector 为最大纠缠 Bell 对）；
+  仅规范固定后仍失败的极端数值病理报 `ArgumentError`（`entropy` 不受影响）。
 
 ## 5. 数值验证摘要
 
