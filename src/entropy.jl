@@ -6,9 +6,9 @@
 # exp(½c†Wc†)）不是密度矩阵，调用直接报错——其纠缠量请用 osee。
 # ============================================================================ #
 
-# 玻色只接受密度矩阵形态输入（恒可定义）；费米按 isbdg 判定
-_check_densitymatrix(::BosonicGaussianState) = nothing
-_check_densitymatrix(s::FermionicGaussianState) =
+# 密度矩阵形态判定：Gibbs 分支（isbdg = true）才有偏迹熵；
+# 纯配对输入是 exp(非厄米二次型) 型算符/向量，不是密度矩阵
+_check_densitymatrix(s::AbstractGaussianState) =
     s.isbdg || throw(ArgumentError(
         "entropy 只对密度矩阵形态的输入（isbdg = true）有定义；当前对象是 " *
         "exp(非厄米二次型) 型算符（ρ 不是密度矩阵）。其纠缠量请用 osee" *

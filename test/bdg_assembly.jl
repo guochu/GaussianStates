@@ -82,9 +82,11 @@ end
 
 # ---------------- 1. 构造校验 ----------------
 @testset "构造校验" begin
-    # isbdg：费米 Gibbs = true，纯配对 = false（玻色无此字段——恒为密度矩阵输入）
+    # isbdg：费米/玻色 Gibbs = true，纯配对 = false（按谱/对称性自动判定）
     @test FermionicGaussianState(fermionic_bdg_matrix(rand_sym(rng, 2), randn(rng, 2, 2))).isbdg
     @test !FermionicGaussianState(rand_antisym(rng, 4; scale=0.5)).isbdg
+    @test BosonicGaussianState(Matrix{Float64}(I, 2, 2)).isbdg
+    @test !BosonicGaussianState([0.0 0.4; 0.4 0.0]).isbdg     # 谱 ⊂ (−1,1) 的非正定 → 纯配对
     # 既非厄米也非反对称
     @test_throws ArgumentError FermionicGaussianState([1.0 2.0; 0.0 1.0])
     # 玻色必须对称、正定、实

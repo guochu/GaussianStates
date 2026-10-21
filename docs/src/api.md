@@ -12,9 +12,11 @@ bosonic_bdg_matrix
 ## 访问器
 
 ```@docs
-covariance
 nmodes
 ```
+
+协方差不经导出函数访问：任何熵计算后可直接读字段 `s.Γ`
+（首次需要时可用非导出的 `GaussianStates.covariance(s)` 触发计算并缓存）。
 
 ## 熵
 

@@ -4,10 +4,11 @@
 
 abstract type AbstractGaussianState end
 
-"协方差矩阵 Γ（惰性计算并缓存；费米为 Majorana 协方差，玻色为正则坐标协方差）。"
+# 协方差矩阵 Γ（惰性计算并缓存；费米为 Majorana 协方差，玻色为正则坐标协方差）。
+# 非导出：公开访问方式是任何熵计算后直接读字段 s.Γ（或用限定名 GaussianStates.covariance）。
 covariance(s::AbstractGaussianState) = _gamma(s)
 
-"模式（site）数：`size(covariance(s),1) ÷ 2`（每个模式 2 个自由度）。"
+"模式（site）数：`size(Γ,1) ÷ 2`（每个模式 2 个自由度）。"
 nmodes(s::AbstractGaussianState) = size(covariance(s), 1) ÷ 2
 
 # 模式指标 → Γ 行指标（每个模式占 2 个：Majorana γ_{2p−1},γ_{2p} 或正则坐标 x_p,p_p）

@@ -452,6 +452,59 @@ function embed_operator(op::AbstractMatrix, m::Int, nm::Int, d::Int)
 end
 
 """
+    bosonic_pairing_vector(W; nbas=6) -> Vector{ComplexF64}
+
+玻色纯配对向量 |Ψ⟩ = exp(½ c†Wc†)|0⟩（W 实对称，‖W‖<1）的 Fock 截断
+稠密实现：每模截断到 `nbas` 个激发，对截断生成元做矩阵指数。
+"""
+function bosonic_pairing_vector(W::AbstractMatrix{<:Real}; nbas::Int=6)
+    N = size(W, 1)
+    d = nbas + 1
+    dim = d^N
+    ad = ComplexF64.(transpose(single_mode_a(nbas)))
+    Gd = zeros(ComplexF64, dim, dim)
+    for i in 1:N, j in 1:N
+        iszero(W[i, j]) && continue
+        Gd .+= (W[i, j] / 2) .* (embed_operator(ad, i, N, d) *
+                                 embed_operator(ad, j, N, d))
+    end
+    e0 = zeros(ComplexF64, dim); e0[1] = 1
+    ψ = exp(Gd) * e0
+    return ψ ./ norm(ψ)
+end
+
+"""截断向量的协方差 σ_ab = Re⟨ψ|R_aR_b|ψ⟩（R = (x₁,p₁,…)，模式 1 最低位）"""
+function covariance_from_bosonic_vector(ψ::AbstractVector{<:Number},
+                                        nmodes::Int, d::Int)
+    a = single_mode_a(d - 1)
+    ad = transpose(a)
+    xm = ComplexF64.((a .+ ad) ./ sqrt(2))
+    pm = ComplexF64.(-1im .* (a .- ad) ./ sqrt(2))
+    R = Vector{Matrix{ComplexF64}}(undef, 2nmodes)
+    for m in 1:nmodes
+        R[2m-1] = embed_operator(xm, m, nmodes, d)
+        R[2m]   = embed_operator(pm, m, nmodes, d)
+    end
+    σ = zeros(2nmodes, 2nmodes)
+    for i in 1:2nmodes, j in i:2nmodes
+        σ[i, j] = σ[j, i] = real(dot(ψ, R[i] * (R[j] * ψ)))
+    end
+    return σ
+end
+
+"""截断向量的割熵（SVD）：sites 为模式指标（1..nmodes），模式 1 最低位"""
+function dense_osee_bosonic_vector(ψ::AbstractVector{<:Number}, nmodes::Int,
+                                   d::Int, sites::Vector{Int})
+    T = reshape(ψ, ntuple(_ -> d, nmodes)...)
+    perm = vcat(sort(sites), sort(setdiff(1:nmodes, sites)))
+    M = reshape(permutedims(T, perm), d^length(sites), d^(nmodes - length(sites)))
+    sv = svdvals(M)
+    p = sv .^ 2; p ./= sum(p)
+    p = p[p .> 1e-16]
+    return -sum(p .* log.(p))
+end
+
+"""
     bosonic_density_matrix(bdg; nbas=16) -> (ρ, dims)
 
 由 BdG 二次型构造 ρ = exp(−½Rᵀ·bdg·R)/Z，R = (x₁,p₁,x₂,p₂,…)，

@@ -59,3 +59,53 @@ end
     # 两模是直积热态 ⇒ operator-space OSEE 为 0
     @test osee(s, [1, 3]) ≈ 0.0 atol=1e-8
 end
+
+# ---------------- 4b. 玻色纯配对（IF 系数态，非密度矩阵） ----------------
+@testset "玻色纯配对：TMSV 解析 + 稠密仲裁" begin
+    # 解析：W = [[0,M],[Mᵀ,0]]，M = m·[[0,1],[1,0]] ⟹ 配对 (c₁,d₂)、(c₂,d₁)
+    # 均跨 site ⟹ site 割（模式对 [p, n+p]）= 单模热熵（tanh r = m）
+    m = 0.45
+    M = m .* [0.0 1.0; 1.0 0.0]
+    Wd = [zeros(2, 2) M; transpose(M) zeros(2, 2)]
+    s = BosonicGaussianState(Wd)
+    @test !s.isbdg
+    @test_throws ArgumentError entropy(s)
+    @test_throws ArgumentError entropy(s, [1])
+    n̄(x) = x^2 / (1 - x^2)
+    SvN(x) = (n̄(x) + 1) * log(n̄(x) + 1) - n̄(x) * log(n̄(x))
+    # site 割 {c_p,d_p} 同时劈开两条配对（c₁–d₂ 与 c₂–d₁）⟹ 2 × 单模热熵
+    @test osee(s, [1, 3]) ≈ 2SvN(m) atol = 1e-12         # site 1 = 模式 {c₁, d₁}
+    @test osee(s, [2, 4]) ≈ 2SvN(m) atol = 1e-12         # 互补割同熵（纯向量）
+    @test osee(s, collect(1:4)) ≈ 0.0 atol = 1e-12      # 纯向量整体系
+    @test osee(s, [1, 3]; α=2) ≈ 2log(1 + 2n̄(m)) atol = 1e-12
+
+    # 随机实对称 W（谱 ⊂ (−1,1)）：协方差与割熵对稠密截断向量仲裁
+    n = 2                                               # 2n = 4 个模
+    rng = MersenneTwister(20241021)                     # 固定 seed：截断误差不随全局 rng 浮动
+    A = randn(rng, 2n, 2n)
+    W = (A + A') ./ 2
+    W ./= (8 * opnorm(W, 1))                            # 奇异值 ≤ 1/8，nbas=6 截断尾巴 ~1e-13
+    s = BosonicGaussianState(W)
+    @test !s.isbdg
+    Γ = covariance(s)
+    nbas = 6
+    d = nbas + 1
+    ψ = bosonic_pairing_vector(W; nbas=nbas)
+    @test maximum(abs, Γ - covariance_from_bosonic_vector(ψ, 2n, d)) < 5e-8
+    # 纯态：辛本征值全 ½；Γd === Γ
+    Ω = GaussianStates._omega(2n)
+    ν = abs.(eigvals(Ω * Γ))
+    @test maximum(abs.(ν .- 0.5)) < 1e-10
+    @test GaussianStates._gammad(s) === Γ
+    # 割熵 vs 稠密 SVD（残差 ~ 截断尾巴）
+    for sites in ([1, 3], [2, 4], [1, 2, 3, 4])
+        @test osee(s, sites) ≈
+              dense_osee_bosonic_vector(ψ, 2n, d, sites) atol = 1e-8
+    end
+    # 互补对称（纯向量）
+    @test osee(s, [1, 3]) ≈ osee(s, [2, 4]) atol = 1e-10
+    # densitymatrix：截断 |Ψ⟩⟨Ψ| 的纯度
+    ρp = densitymatrix(s; d=5)
+    @test tr(ρp) ≈ 1 atol = 1e-12
+    @test maximum(abs, eigvals(Hermitian((ρp + ρp') ./ 2))) ≥ 1 - 1e-6
+end

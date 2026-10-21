@@ -17,6 +17,7 @@
 # ============================================================================
 
 using GaussianStates
+using GaussianStates: covariance                    # 不导出；测试经显式导入使用
 using LinearAlgebra
 using Random
 using Test
