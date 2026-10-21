@@ -8,6 +8,11 @@ abstract type AbstractGaussianState end
 # 非导出：公开访问方式是任何熵计算后直接读字段 s.Γ（或用限定名 GaussianStates.covariance）。
 covariance(s::AbstractGaussianState) = _gamma(s)
 
+# OSEE 用的 doubled 纯化协方差 Γd（惰性计算并缓存；费米 Gibbs 分支为 doubled
+# 纯化态的 Majorana 协方差，纯配对分支 Γd === Γ，玻色同理）。
+# 非导出：任何 osee 计算后直接读字段 s.Γd（或用限定名 GaussianStates.osee_covariance）。
+osee_covariance(s::AbstractGaussianState) = _gammad(s)
+
 "模式（site）数：`size(Γ,1) ÷ 2`（每个模式 2 个自由度）。"
 nmodes(s::AbstractGaussianState) = size(covariance(s), 1) ÷ 2
 

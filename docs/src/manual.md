@@ -119,7 +119,8 @@ TEMPO PT/ADT bond 熵是同一条曲线的两端。
 
 访问不经导出函数：任何熵计算后直接读字段 `s.Γ`（惰性计算并缓存；
 初始为 `nothing`，首次需要时可用非导出的 `GaussianStates.covariance(s)`
-触发计算）。
+触发计算）。OSEE 的 doubled 纯化协方差同理：读字段 `s.Γd`，
+或用非导出的 `GaussianStates.osee_covariance(s)` 触发计算并缓存。
 
 ## 3. entropy：子系统（偏迹）熵
 

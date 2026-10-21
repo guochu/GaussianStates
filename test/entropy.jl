@@ -60,4 +60,11 @@ end
     @test Γ1 isa Matrix{Float64}
     # 纯配对分支：Γd 与 Γ 同一对象
     @test GaussianStates._gammad(s) === Γ1
+    # osee_covariance（非导出）在新对象上返回并缓存 Γd
+    s2 = FermionicGaussianState(rand_antisym(rng, 4; scale=0.5))
+    @test s2.Γd === nothing
+    @test GaussianStates.osee_covariance(s2) === GaussianStates._gammad(s2)
+    @test s2.Γd === s2.Γ
+    # 未导出：using GaussianStates 后裸名不可见
+    @test_throws UndefVarError Main.eval(:osee_covariance)
 end
