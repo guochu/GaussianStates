@@ -106,6 +106,50 @@ end
     @test osee(s, [1, 3]) ≈ osee(s, [2, 4]) atol = 1e-10
     # densitymatrix：截断 |Ψ⟩⟨Ψ| 的纯度
     ρp = densitymatrix(s; d=5)
-    @test tr(ρp) ≈ 1 atol = 1e-12
+    @test tr(ρp) ≈ 1 atol=1e-12
     @test maximum(abs, eigvals(Hermitian((ρp + ρp') ./ 2))) ≥ 1 - 1e-6
+end
+
+@testset "玻色纯配对：复对称 W（一般非 BdG 输入）" begin
+    # 复对称 W（实时/混合时间 IF 的系数态）；4 个 doubled 模，nbas 取小以免稠密
+    # Fock 空间（d⁴）膨胀
+    N = 4
+    rngc = MersenneTwister(20241023)
+    A = randn(rngc, ComplexF64, N, N)
+    W = (A + transpose(A)) ./ 2
+    W ./= (40 * opnorm(W, 2))                   # 最大奇异值 ≪ 1，截断尾巴极小
+    s = BosonicGaussianState(W)
+    @test !s.isbdg
+    @test_throws ArgumentError entropy(s)
+
+    Γ = covariance(s)
+    @test eltype(Γ) == Float64
+    @test maximum(abs.(Γ - transpose(Γ))) < 1e-12
+    # 纯态：辛本征值全 ½；Γd === Γ
+    Ω = GaussianStates._omega(N)
+    ν = abs.(eigvals(Ω * Γ))
+    @test maximum(abs.(ν .- 0.5)) < 1e-8
+    @test GaussianStates._gammad(s) === Γ
+
+    nbas = 5
+    d = nbas + 1
+    ψ = bosonic_pairing_vector(W; nbas=nbas)
+    @test maximum(abs.(Γ - covariance_from_bosonic_vector(ψ, N, d))) < 5e-8
+
+    # 割熵 vs 稠密 SVD（复 W 的 Γ 含 σ_xp = Im K，正确性由稠密态仲裁）
+    for sites in ([1, 3], [2, 4], [1, 2, 3, 4])
+        @test osee(s, sites) ≈
+              dense_osee_bosonic_vector(ψ, N, d, sites) atol=1e-7
+    end
+    @test osee(s, [1, 3]) ≈ osee(s, [2, 4]) atol=1e-8
+
+    # densitymatrix（复 W 分支）与独立截断向量对拍
+    ρp = densitymatrix(s; d=5)
+    ψ4 = bosonic_pairing_vector(W; nbas=4)
+    @test ρp ≈ ψ4 * ψ4' atol=1e-12
+    @test tr(ρp) ≈ 1 atol=1e-12
+
+    # 非法输入：非对称复矩阵 / 最大奇异值 ≥ 1
+    @test_throws ArgumentError BosonicGaussianState(A)
+    @test_throws ArgumentError BosonicGaussianState(W .* (1.5 / maximum(svdvals(W))))
 end

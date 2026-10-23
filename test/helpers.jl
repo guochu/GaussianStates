@@ -454,10 +454,10 @@ end
 """
     bosonic_pairing_vector(W; nbas=6) -> Vector{ComplexF64}
 
-玻色纯配对向量 |Ψ⟩ = exp(½ c†Wc†)|0⟩（W 实对称，‖W‖<1）的 Fock 截断
+玻色纯配对向量 |Ψ⟩ = exp(½ c†Wc†)|0⟩（W 复对称，最大奇异值 < 1）的 Fock 截断
 稠密实现：每模截断到 `nbas` 个激发，对截断生成元做矩阵指数。
 """
-function bosonic_pairing_vector(W::AbstractMatrix{<:Real}; nbas::Int=6)
+function bosonic_pairing_vector(W::AbstractMatrix{<:Number}; nbas::Int=6)
     N = size(W, 1)
     d = nbas + 1
     dim = d^N

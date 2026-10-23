@@ -5,19 +5,21 @@
 #   Gibbs   —— bdg 为 2n×2n 实对称正定（正则坐标序 R = (x₁,p₁,x₂,p₂,…)，
 #              ρ ∝ exp(−½Rᵀ·bdg·R)；复系数的 Bogoliubov 块经 bosonic_bdg_matrix
 #              归一为实 K）。entropy + osee。
-#   纯配对 —— bdg 为实对称、谱 ⊂ (−1,1) 的非正定矩阵（典型形式
-#              W = [[0, M],[Mᵀ, 0]]），表示纯高斯**向量**
-#              |Ψ⟩ = exp(½ c†·W·c†)|0⟩（IF/影响泛函系数态，ρ 非密度矩阵）。
-#              只 osee（Γ 限制熵）；其协方差由 G/K 矩阵函数闭式给出（见下）。
+#   纯配对 —— bdg 为**复对称**矩阵 W = Wᵀ（实对称、谱 ⊂ (−1,1) 的非正定
+#              矩阵是特例；典型形式 W = [[0, M],[Mᵀ, 0]]），表示纯高斯**向量**
+#              |Ψ⟩ = exp(½ c†·W·c†)|0⟩（IF/影响泛函系数态，ρ 非密度矩阵），
+#              可归一化条件为最大奇异值 < 1（I − WW† > 0）。
+#              只 osee（Γ 限制熵）；其协方差由 G/K 矩阵函数闭式给出（见下），
+#              Γ 恒为实对称（复 W 只贡献对称的 σ_xp = Im K）。
 # Γ 与 Γd 惰性计算并缓存；纯配对分支 Γd === Γ。
 # ============================================================================
 
 """
     BosonicGaussianState(bdg::Matrix{T}) where {T<:Number}
 
-玻色高斯态，`bdg` 为 2n×2n **实对称**矩阵，按谱自动判定分支：
+玻色高斯态，`bdg` 为 2n×2n 矩阵，按**是否为实矩阵 / 谱**自动判定分支：
 
-1. **正定**（Gibbs 形态，`isbdg = true`）：态为高斯密度矩阵
+1. **实对称且正定**（Gibbs 形态，`isbdg = true`）：态为高斯密度矩阵
    （正则坐标序 `R = (x₁,p₁,x₂,p₂,…)`，`[x_a,p_b] = iδ_ab`）
 
    ```text
@@ -30,30 +32,30 @@
    （`−iK/2` 的本征值为 Williamson 频率 `±ω_k/2`）。校验：
    `bdg = ωI ⇒ Γ = ½coth(ω/2)·I`。
 
-2. **非正定且谱 ⊂ (−1,1)**（纯配对形态，`isbdg = false`）：`bdg = W` 表示
-   doubled 空间 2n 个模上的纯高斯**向量**
+2. **复对称**（纯配对形态，`isbdg = false`；实对称但非正定且谱 ⊂ (−1,1)
+   也归入此分支）：`bdg = W`（`W = Wᵀ`）表示 doubled 空间 2n 个模上的纯高斯
+   **向量**
 
    ```text
-   |Ψ⟩ = exp(½ c†·W·c†)|0⟩ ,      W = Wᵀ 实对称，‖W‖ < 1
+   |Ψ⟩ = exp(½ c†·W·c†)|0⟩ ,      W = Wᵀ，最大奇异值 < 1
    ```
 
    （如影响泛函系数态 `exp(Σ M_pq c†_p d†_q)|0⟩` 取 `W = [[0,M],[Mᵀ,0]]`，
-   见 TEMPO/osee 报告 §5.2）。ρ = |Ψ⟩⟨Ψ| 不是 Gibbs 密度矩阵（纯高斯向量的
-   生成元必带相位/反对称部分，任何有限正定 K 都给不出），故不走分支 1。
-   协方差由矩阵函数闭式给出（`W = QΛQᵀ`）：
+   见 TEMPO/osee 报告 §5.2；复 Δ 的实时/混合时间 IF 给出复 `M`、复 `W`。）
+   ρ = |Ψ⟩⟨Ψ| 不是 Gibbs 密度矩阵，故不走分支 1。由湮灭条件
+   `(c_i − Σ_j W_ij c†_j)|Ψ⟩ = 0` 得矩阵函数闭式（`W† = W̄`）：
 
    ```text
-   G = (I − W²)⁻¹ = ⟨c c†⟩ ,   K = G·W = ⟨c c⟩
-   σ_xx = G + K − ½I ,   σ_pp = G − K − ½I ,   σ_xp = 0
+   G = (I − W·W†)⁻¹ = ⟨c c†⟩ ,   K = W·Gᵀ = ⟨c c⟩ ,   F = ⟨c†c⟩ = Gᵀ − I
+   σ_xx = Re G + Re K − ½I ,   σ_pp = Re G − Re K − ½I ,   σ_xp = Im(K − G)
    ```
 
-   （谱上 `G_kk = 1/(1−λ_k²)`、`K_kk = λ_k/(1−λ_k²)`；σ 正定且辛本征值
-   全为 ½，即纯态。等价于 ⊗ 双模压缩对。）
+   `σ` 恒为**实对称**（任意复对称 W 下成立），且辛本征值全为 ½（纯态）。
+   实 W 时退化为 `G = (I−W²)⁻¹`、`K = GW`、`σ_xp = 0`（等价于 ⊗ 双模压缩对）。
 
 `osee` 对两个分支都有定义（Gibbs：doubled 纯化协方差；纯配对：向量协方差
 限制熵）；`entropy` 只对 Gibbs 分支（`isbdg = true`）。字段 `Γ`/`Γd` 初始为
-`nothing`，惰性缓存。真正复对称的 K（非厄米算符）与复 W 仍未支持——其协方差
-是复的，快速算法失效（见文档理论与算法页 §1）。
+`nothing`，惰性缓存。
 """
 mutable struct BosonicGaussianState{T<:Number} <: AbstractGaussianState
     bdg::Matrix{T}
@@ -66,18 +68,25 @@ mutable struct BosonicGaussianState{T<:Number} <: AbstractGaussianState
     end
 end
 
+# 数值上是否为实矩阵（决定实/复路径）
+function _bosonic_isreal(W::AbstractMatrix)
+    eltype(W) <: Real && return true
+    return maximum(abs, imag.(W)) ≤ 1e-9 * max(1.0, opnorm(W, Inf))
+end
+
 # Γ 的惰性计算与缓存
 function _gamma(s::BosonicGaussianState)
     s.Γ === nothing || return s.Γ
-    W = _realify("bosonic bdg", s.bdg)
-    s.Γ = s.isbdg ? _bosonic_gamma_from_bdg(W) : _bosonic_gamma_pairing(W)
+    W = Matrix{ComplexF64}(s.bdg)
+    s.Γ = s.isbdg ? _bosonic_gamma_from_bdg(real.(W)) :
+                    _bosonic_gamma_pairing(_bosonic_isreal(W) ? real.(W) : W)
     return s.Γ
 end
 
 # Γd 的惰性计算与缓存（纯配对分支：与 Γ 同一对象）
 function _gammad(s::BosonicGaussianState)
     s.Γd !== nothing && return s.Γd
-    s.isbdg && return s.Γd = _bosonic_doubled_covariance(_realify("bosonic bdg", s.bdg))
+    s.isbdg && return s.Γd = _bosonic_doubled_covariance(real.(Matrix{ComplexF64}(s.bdg)))
     return s.Γd = _gamma(s)
 end
 
@@ -121,27 +130,38 @@ function bosonic_bdg_matrix(h::AbstractMatrix, g::AbstractMatrix=zero(h))
     return [Kxx Kxp; transpose(Kxp) Kpp]
 end
 
-# 构造时的全部校验与分支判定：方阵、偶数维、实对称；
-# 正定 → Gibbs（true）；谱 ⊂ (−1,1) 的非正定 → 纯配对（false）；否则报错
+# 构造时的全部校验与分支判定：方阵、偶数维；实对称 → 按谱判 Gibbs/实配对；
+# 复对称 → 纯配对（要求最大奇异值 < 1）；其余报错
 function _bosonic_validate(bdg::AbstractMatrix)
     n = size(bdg, 1)
     size(bdg, 2) == n || throw(ArgumentError("bdg 必须是方阵"))
     (n ≥ 2 && iseven(n)) || throw(ArgumentError("bdg 必须是偶数维 2n×2n 矩阵"))
-    H = _realify("bosonic bdg", bdg)
-    tol = 1e-9 * max(1.0, opnorm(H, Inf))
-    opnorm(H - transpose(H), Inf) ≤ tol ||
-        throw(ArgumentError("玻色 bdg 必须是实对称矩阵"))
-    λ = eigvals(Symmetric(H))
-    if minimum(λ) > 0
-        return true
-    elseif maximum(abs.(λ)) < 1 - 1e-12
-        return false
-    else
-        throw(ArgumentError(
-            "玻色 bdg 无法解释：既非正定（Gibbs 形态 ρ ∝ exp(−½RᵀKR)），" *
-            "也非谱严格落在 (−1,1) 内（纯配对形态 exp(½c†Wc†)|0⟩）。" *
-            "纯配对输入需要 |λ_max(W)| < 1（可归一化条件 I − W² > 0）"))
+    W = Matrix{ComplexF64}(bdg)
+    scale = max(1.0, opnorm(W, Inf))
+    if _bosonic_isreal(W)
+        H = real.(W)
+        opnorm(H - transpose(H), Inf) ≤ 1e-9 * scale ||
+            throw(ArgumentError("实玻色 bdg 必须是实对称矩阵"))
+        λ = eigvals(Symmetric(H))
+        if minimum(λ) > 0
+            return true
+        elseif maximum(abs.(λ)) < 1 - 1e-12
+            return false
+        else
+            throw(ArgumentError(
+                "玻色 bdg 无法解释：既非正定（Gibbs 形态 ρ ∝ exp(−½RᵀKR)），" *
+                "也非谱严格落在 (−1,1) 内（纯配对形态 exp(½c†Wc†)|0⟩）。" *
+                "纯配对输入需要 |λ_max(W)| < 1（可归一化条件 I − W² > 0）"))
+        end
     end
+    opnorm(W - transpose(W), Inf) ≤ 1e-9 * scale ||
+        throw(ArgumentError(
+            "复玻色 bdg 必须是**复对称**矩阵 W = Wᵀ（纯配对态 " *
+            "exp(½c†Wc†)|0⟩）；复厄米二次型请先用 bosonic_bdg_matrix 组装"))
+    maximum(svdvals(W)) < 1 - 1e-12 ||
+        throw(ArgumentError(
+            "复对称纯配对输入需要最大奇异值 < 1（可归一化条件 I − W·W† > 0）"))
+    return false
 end
 
 # ========================================================================== #
@@ -169,24 +189,30 @@ function _bosonic_gamma_from_bdg(bdg::AbstractMatrix)
     return (Γ .+ Γ') ./ 2
 end
 
-# 纯配对向量 |Ψ⟩ = exp(½ c†Wc†)|0⟩（W 实对称，‖W‖<1）的协方差。
-# W = QΛQᵀ，谱上 G_k = 1/(1−λ_k²)（⟨cc†⟩）、K_k = λ_k/(1−λ_k²)（⟨cc⟩）：
-#   σ_xx = G + K − ½I ,  σ_pp = G − K − ½I ,  σ_xp = 0（模式指标上的矩阵函数）
-# σ 正定且辛本征值全 ½（纯态）；对 W = [[0,M],[Mᵀ,0]] 等价于 ⊗ 双模压缩对
-# （s_k = 奇异值(M)，tanh r_k = s_k）。G/K 公式与 TEMPO/osee 报告 §5.2 一致。
-function _bosonic_gamma_pairing(W::Matrix{Float64})
-    N = size(W, 1)                                   # 2n 个 doubled 模
-    e = eigen(Symmetric(W))
-    λ = e.values
-    gλ = 1 ./ (1 .- λ .^ 2)
-    G = e.vectors * Diagonal(gλ) * e.vectors'
-    K = e.vectors * Diagonal(λ .* gλ) * e.vectors'
-    xx = real.(G) .+ real.(K) .- 0.5 .* Matrix{Float64}(I, N, N)
-    pp = real.(G) .- real.(K) .- 0.5 .* Matrix{Float64}(I, N, N)
-    Γ = zeros(2N, 2N)                                # (x₁,p₁,…,x_N,p_N)
+# 纯配对向量 |Ψ⟩ = exp(½ c†Wc†)|0⟩（W 复对称，最大奇异值 < 1）的协方差。
+# 湮灭条件 (c_i − Σ_j W_ij c†_j)|Ψ⟩ = 0 给出
+#   G = (I − W·W†)⁻¹ = ⟨c c†⟩ ,   K = W·Gᵀ = ⟨c c⟩ ，且 F = ⟨c†c⟩ = Gᵀ − I
+# 再由 ⟨x_i x_j⟩ = ½[K_ij + K̄_ij + G_ij + F_ij] 等得
+#   σ_xx = Re G + Re K − ½I ,  σ_pp = Re G − Re K − ½I ,  σ_xp = Im(K − G)
+# （σ_xp 的 −Im G 修正来自 F = Gᵀ − I 的共轭部分，实 W 时自然为零。）
+# Γ 恒为实对称、辛本征值全 ½（纯态）。
+function _bosonic_gamma_pairing(W::AbstractMatrix{<:Number})
+    N = size(W, 1)
+    T = eltype(W) <: Real ? Float64 : ComplexF64
+    Wc = Matrix{T}(W)
+    Id = Matrix{T}(I, N, N)
+    G = (Id - Wc * adjoint(Wc)) \ Id
+    K = Wc * transpose(G)
+    Idr = Matrix{Float64}(I, N, N)
+    xx = real.(G) .+ real.(K) .- 0.5 .* Idr
+    pp = real.(G) .- real.(K) .- 0.5 .* Idr
+    xp = imag.(K) .- imag.(G)
+    Γ = zeros(Float64, 2N, 2N)                      # (x₁,p₁,…,x_N,p_N)
     for i in 1:N, j in 1:N
         Γ[2i-1, 2j-1] = xx[i, j]
         Γ[2i, 2j] = pp[i, j]
+        Γ[2i-1, 2j] = xp[i, j]
+        Γ[2i, 2j-1] = xp[j, i]
     end
     return (Γ .+ Γ') ./ 2
 end
@@ -342,12 +368,12 @@ end
 """
 function densitymatrix(s::BosonicGaussianState; d::Int=5)
     d ≥ 2 || throw(ArgumentError("Fock 截断维数 d 必须 ≥ 2"))
-    W = _realify("bosonic bdg", s.bdg)
     if s.isbdg
-        ρ, _ = _bosonic_dense_rho(W; nbas=d - 1)
+        ρ, _ = _bosonic_dense_rho(real.(Matrix{ComplexF64}(s.bdg)); nbas=d - 1)
         return ρ
     end
     # 纯配对：|Ψ⟩ = exp(½ Σ W_ij c†_i c†_j)|0⟩（截断生成元的矩阵指数）
+    W = Matrix{ComplexF64}(s.bdg)                    # 可为复对称
     N = size(W, 1)                                   # 2n 个模
     a = _single_mode_a(d - 1)
     ad = transpose(a)

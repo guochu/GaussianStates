@@ -89,7 +89,7 @@ end
     @test !BosonicGaussianState([0.0 0.4; 0.4 0.0]).isbdg     # 谱 ⊂ (−1,1) 的非正定 → 纯配对
     # 既非厄米也非反对称
     @test_throws ArgumentError FermionicGaussianState([1.0 2.0; 0.0 1.0])
-    # 玻色必须对称、正定、实
+    # 玻色必须对称：实矩阵按谱判 Gibbs/纯配对，复矩阵须复对称（纯配对）
     @test_throws ArgumentError BosonicGaussianState([1.0 0.2; 0.0 1.0])
     @test_throws ArgumentError BosonicGaussianState([1.0 0.0; 0.0 -1.0])
     @test_throws ArgumentError BosonicGaussianState(ComplexF64[1.0 0.5im; -0.5im 1.0])
