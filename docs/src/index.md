@@ -89,6 +89,8 @@ psib = purify(opb)
 - [理论与算法](@ref)：block 约定与 `c₀`、协方差表示、`purify` 的湮灭子
   构造（费米/玻色）、TFD、熵与偏迹公式、数值验证摘要。
 - [API 参考](@ref)：全部导出接口。
+- 示例：`docs/examples/boundary_driven_osee.jl` —— 边界驱动费米链的
+  时间演化，快速协方差 OSEE 与稠密 Fock OSEE 全程对齐（~1e-12）。
 
 ## 相关生态
 

@@ -28,6 +28,27 @@
   `symmetrize`/`antisymmetrize` 自动投影（任意输入合法，Fock 代数下
   严格等价，测试用 fockmatrix + purify 协方差对拍固化）。
 
+## 2026-10-29 会话（四）：boundary-driven OSEE 端到端示例
+
+`docs/examples/boundary_driven_osee.jl`：n=6 链（随机在位+hopping）+ 两端
+零温损耗 Lindblad（L = √γ c），混合直积初态；快速路径（双线性仿射 EOM
+精确解 Γ(t) → 模算符重建 → purify+entropy）与稠密路径（𝓛 超算符指数 →
+FSWAP 交错矢量化 → 偏迹熵）**全程对齐：|ΔOSEE| ≤ 1e-12，|ΔΓ| ≤ 3e-15，
+ρ(t) 全程在 e^quadratic 族内 ~1e-16**。过程中钉死的约定（易错点）：
+
+- **费米模重排必须走 FSWAP 网络**（(−1)^{n₁n₂} 符号），朴素张量轴置换错；
+  站点割（左 ket+bra 模）在交错序 (c₁d₁c₂d₂…) 下才是连续前缀，
+  此约定下 graded |I⟩_G 的 OSEE 才与协方差模式熵相等。
+- **⟨c†ᵢcⱼ⟩ = f(h)ᵀ（转置）**：模算符重建 h = W̄εWᵀ（W 为 G 的本征
+  向量）；实对称时转置不可见，复厄米（电流相干）时必错。
+- G = ⟨c†c⟩ 从 Γ 的直接 Majorana 公式：
+  `¼[2δᵢⱼ − i(Γ₂ᵢ₋₁,₂ⱼ₋₁ + Γ₂ᵢ,₂ⱼ) + Γ₂ᵢ₋₁,₂ⱼ + Γ₂ⱼ₋₁,₂ᵢ]`。
+- 双线性 EOM 的系数用稠密矩阵一次性数值提取（𝓛† 闭合残差 ~1e-17），
+  免手推；增广仿射矩阵右下角必须是 0 不是 1（d/dt 1 = 0）。
+- 动力学选型：线性 Lindblad（c、c† 型 jump）+ 二次 H 保持 e^quadratic
+  族（本例全时验证）；数守恒型驱动（dephasing n̂）会把态锁在固定 N 扇区，
+  混合后离开族——不要用。
+
 ## 2026-10-29 会话（二）：legacy 删除 + M4 文档 + §6.4 性质测试
 
 - `src/legacy/`、`test/legacy/` 已删除（无任何引用，v1 完整备份在
