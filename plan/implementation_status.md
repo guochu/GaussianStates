@@ -20,9 +20,13 @@
 - **`bdg` 与 `c₀`**：确认无 bug——`c₀` 是单位算符项，`e^{c₀}` 只给
   `e^H` 乘标量，归一化后对协方差/purify/熵无影响；只有
   `densitymatrix`（Fock 矩阵）需要并已计入。docstring 已写明。
-- 测试/文档同步（`docs` 重建 0 错误）；**95/95 全绿**，TFD 广谱
+- 测试/文档同步（`docs` 重建 0 错误）；**99/99 全绿**，TFD 广谱
   （稳定算符 n=1..8 × 4 seeds）通过。debug/ 下旧仲裁脚本引用已删
   函数，属会话历史记录，未更新。
+- 追加（同日）：`fockmatrix`（原 densitymatrix）截断关键字 `nbas → d`；
+  构造器对 A、B 的对称性检查（`_check_sym`/`_check_antisym`）改为
+  `symmetrize`/`antisymmetrize` 自动投影（任意输入合法，Fock 代数下
+  严格等价，测试用 fockmatrix + purify 协方差对拍固化）。
 
 ## 2026-10-29 会话（二）：legacy 删除 + M4 文档 + §6.4 性质测试
 

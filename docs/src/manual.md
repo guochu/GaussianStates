@@ -13,7 +13,9 @@ Nambu 自旋量 `Ψ = (c₁..c_n, c₁†..c_n†)`。一般（非厄米）算�
 3 个独立 block 与常数：
 
 ```text
-H = c†hc + ½(c†Ac† + cBc) + c₀ ,    A、B 反对称
+H = c†hc + ½(c†Ac† + cBc) + c₀ ,    A、B 任意输入
+                                    （构造时自动反对称化：对称部分在
+                                    c†ᵢc†ⱼ = −c†ⱼc†ᵢ 下自动抵消，对角恒为零）
 ```
 
 规范 BdG 矩阵（`bdg(op)`）
@@ -34,7 +36,9 @@ X = ⎡ h   A ⎤ ,    ½Ψ†XΨ = c†hc + ½c†Ac† + ½cBc − ½tr(h)
 ### 玻色
 
 ```text
-H = a†ha + ½(a†Aa† + aBa) + c₀ ,    A、B 复对称
+H = a†ha + ½(a†Aa† + aBa) + c₀ ,    A、B 任意输入
+                                    （构造时自动对称化：反对称部分在
+                                    a†ᵢa†ⱼ = a†ⱼa†ᵢ 下自动抵消）
 X = ⎡ h   A ⎤ ,    ½Ψ†XΨ = a†ha + ½a†Aa† + ½aBa + ½tr(h)
     ⎣ B   hᵀ⎦
 ```

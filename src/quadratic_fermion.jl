@@ -6,13 +6,9 @@
 # 厄米：h=h†, B=A†（只存 h、A，.B 由 getproperty 合成）
 # ============================================================================
 
-function _check_antisym(M::AbstractMatrix, name::AbstractString)
-    n = size(M, 1)
-    size(M, 2) == n || throw(ArgumentError("$name 必须是方阵"))
-    isapprox(M, -transpose(M); atol=1e-12, rtol=1e-12) ||
-        throw(ArgumentError("$name 必须反对称"))
-    return nothing
-end
+# 费米 Fock 代数（c†ᵢc†ⱼ = −c†ⱼc†ᵢ）中配对矩阵的对称部分自动抵消，
+# 对角元恒为零：任意输入投影到反对称部分，物理上严格等价。
+antisymmetrize(M::AbstractMatrix) = (M - transpose(M)) / 2
 
 function _check_herm(M::AbstractMatrix, name::AbstractString)
     n = size(M, 1)
@@ -30,7 +26,8 @@ end
     FermionicQuadraticOperator(X; c0=0)
 
 一般（非厄米）费米二次型算子 `H = c†hc + ½(c†Ac† + cBc) + c₀`
-（`A`、`B` 反对称）。2n×2n 矩阵 `X` 输入时自动提取独立块与常数：
+（`A`、`B` 任意输入，构造时自动反对称化——对称部分在 Fock 代数中
+自动抵消，对角元恒为零）。2n×2n 矩阵 `X` 输入时自动提取独立块与常数：
 `c₀ = c_in + ½tr(X₂₂) + ½tr(h)`。`exp(op)` 给
 [`FermionicQuadraticOperatorExp`](@ref)。类型参数 `T<:Number` 是 block
 的元素类型（构造时自动提升）。
@@ -48,7 +45,7 @@ function FermionicQuadraticOperator(h, A, B; c0=0)
     n = size(h, 1); size(h, 2) == n || throw(ArgumentError("h 必须是方阵"))
     size(A) == (n, n) || throw(ArgumentError("A 尺寸应为 ($n,$n)"))
     size(B) == (n, n) || throw(ArgumentError("B 尺寸应为 ($n,$n)"))
-    _check_antisym(A, "A"); _check_antisym(B, "B")
+    A = antisymmetrize(A); B = antisymmetrize(B)
     return FermionicQuadraticOperator{T}(h, A, B, convert(T, c0))
 end
 
@@ -60,8 +57,7 @@ function FermionicQuadraticOperator(X::AbstractMatrix; c0=0)
     X11 = X[1:n, 1:n]; X12 = X[1:n, n+1:2n]
     X21 = X[n+1:2n, 1:n]; X22 = X[n+1:2n, n+1:2n]
     h = (X11 - transpose(X22)) / 2
-    A = (X12 - transpose(X12)) / 2
-    B = (X21 - transpose(X21)) / 2
+    A = antisymmetrize(X12); B = antisymmetrize(X21)
     c0b = c0 + tr(X22) / 2 + tr(h) / 2
     return FermionicQuadraticOperator(h, A, B; c0=c0b)
 end
@@ -127,7 +123,7 @@ function FermionicQuadraticHermitianOperator(h, A; c0=0)
     size(A) == (n, n) || throw(ArgumentError("A 尺寸应为 ($n,$n)"))
     _check_herm(h, "h")
     isreal(c0) || throw(ArgumentError("厄米算子的 c0 必须是实数"))
-    A = (A - transpose(A)) / 2          # 只有反对称部分有效
+    A = antisymmetrize(A)               # 只有反对称部分有效
     return FermionicQuadraticHermitianOperator{T}(h, A, real(c0))
 end
 
@@ -139,7 +135,7 @@ function FermionicQuadraticHermitianOperator(X::AbstractMatrix; c0=0)
     X11 = X[1:n, 1:n]; X12 = X[1:n, n+1:2n]
     X21 = X[n+1:2n, 1:n]; X22 = X[n+1:2n, n+1:2n]
     h = (X11 - transpose(X22)) / 2
-    A = (X12 - transpose(X12)) / 2
+    A = antisymmetrize(X12)
     c0b = real(c0 + tr(X22) / 2 + tr(h) / 2)
     return FermionicQuadraticHermitianOperator(h, A; c0=c0b)
 end

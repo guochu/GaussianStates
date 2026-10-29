@@ -125,7 +125,7 @@ end
         ad = adjoint(aop)
         for (h0, λ) in ((3.0, 0.0), (3.0, 0.8), (2.0, 1.4))
             H = BosonicQuadraticHermitianOperator(ComplexF64[-h0;;], ComplexF64[λ;;])
-            ρ = exp(GS._fock_operators(H; d=d)); ρ ./= tr(ρ)
+            ρ = fockmatrix(exp(H); d=d); ρ ./= tr(ρ)
             ops = [aop, ad]
             Cd = zeros(ComplexF64, 2, 2)
             for i in 1:2, j in 1:2
@@ -160,7 +160,7 @@ end
                           (ComplexF64[-2.0+0.5im;;], ComplexF64[0.15;;], ComplexF64[-0.1;;]))
             Hop = BosonicQuadraticOperator(h, A, B)
             N = 20
-            g = exp(GS._fock_operators(Hop; d=N))
+            g = fockmatrix(exp(Hop); d=N)
             Iᵈ = Matrix{ComplexF64}(I, N+1, N+1)
             vecI = sum(kron(v, v) for v in eachcol(Iᵈ))
             ψd = kron(g, Iᵈ) * vecI; ψd ./= norm(ψd)
@@ -254,6 +254,30 @@ end
         @test isapprox(entropy(Gb; α=2), log((1+t)/(1-t)); atol=1e-10)
     end
 
+    @testset "symmetrize/antisymmetrize equivalence" begin
+        rng = MersenneTwister(21)
+        # 费米：任意 A、B（含对称部分与任意对角元）与反对称化严格等价
+        h = randn(rng, ComplexF64, 3, 3)
+        A = randn(rng, ComplexF64, 3, 3); B = randn(rng, ComplexF64, 3, 3)
+        op1 = FermionicQuadraticOperator(h, A, B; c0=0.4)
+        op2 = FermionicQuadraticOperator(h, GS.antisymmetrize(A), GS.antisymmetrize(B); c0=0.4)
+        @test fockmatrix(op1) ≈ fockmatrix(op2)                    # Fock 矩阵逐元素
+        @test covariance(purify(exp(op1))) ≈ covariance(purify(exp(op2)))
+        @test all(diag(op1.A) .== 0) && all(diag(op1.B) .== 0)     # 反对称化 ⟹ 零对角
+        # 玻色：任意 A、B（含反对称部分）与对称化等价
+        hb = -(randn(rng, ComplexF64, 3, 3) + 2I)                  # 稳定（冷）算子
+        Ab = (0.2/sqrt(3)) .* randn(rng, ComplexF64, 3, 3)
+        Bb = (0.2/sqrt(3)) .* randn(rng, ComplexF64, 3, 3)
+        opb1 = BosonicQuadraticOperator(hb, Ab, Bb)
+        opb2 = BosonicQuadraticOperator(hb, GS.symmetrize(Ab), GS.symmetrize(Bb))
+        @test fockmatrix(opb1; d=10) ≈ fockmatrix(opb2; d=10)
+        @test covariance(purify(exp(opb1))) ≈ covariance(purify(exp(opb2)))
+        # 厄米算子的 A 同样自动投影
+        Ah = randn(rng, ComplexF64, 3, 3)
+        Hh = FermionicQuadraticHermitianOperator((h + h') / 2, Ah)
+        @test Hh.A ≈ GS.antisymmetrize(Ah)
+    end
+
     @testset "error paths" begin
         op = exp(random_op(2, 7))
         psi = purify(op)
@@ -261,12 +285,8 @@ end
         @test_throws ArgumentError FermionicQuadraticOperator(
             zeros(ComplexF64,2,3), zeros(ComplexF64,2,2), zeros(ComplexF64,2,2))
         @test_throws ArgumentError FermionicQuadraticOperator(rand(3,3))
-        @test_throws ArgumentError FermionicQuadraticOperator(
-            rand(2,2), rand(2,2), zeros(ComplexF64,2,2))          # A 非反对称
         @test_throws ArgumentError FermionicQuadraticHermitianOperator(
             rand(2,2) + im .* rand(2,2), zeros(ComplexF64,2,2))    # h 非厄米
-        @test_throws ArgumentError BosonicQuadraticOperator(
-            rand(2,2), rand(2,2), zeros(ComplexF64,2,2))           # A 非对称
         @test_throws ArgumentError BosonicQuadraticHermitianOperator(
             rand(2,2) + im .* rand(2,2), zeros(ComplexF64,2,2); c0=im)
         # 非物理协方差

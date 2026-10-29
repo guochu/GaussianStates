@@ -6,20 +6,17 @@
 # 厄米：h=h†, B=A†（只存 h、A，.B 由 getproperty 合成）
 # ============================================================================
 
-function _check_sym(M::AbstractMatrix, name::AbstractString)
-    n = size(M, 1)
-    size(M, 2) == n || throw(ArgumentError("$name 必须是方阵"))
-    isapprox(M, transpose(M); atol=1e-12, rtol=1e-12) ||
-        throw(ArgumentError("$name 必须复对称"))
-    return nothing
-end
+# 玻色 Fock 代数（a†ᵢa†ⱼ = a†ⱼa†ᵢ）中配对矩阵的反对称部分自动抵消：
+# 任意输入投影到对称部分，物理上严格等价。
+symmetrize(M::AbstractMatrix) = (M + transpose(M)) / 2
 
 """
     BosonicQuadraticOperator(h, A, B; c0=0)
     BosonicQuadraticOperator(X; c0=0)
 
 一般（非厄米）玻色二次型算子 `H = a†ha + ½(a†Aa† + aBa) + c₀`
-（`A`、`B` 复对称）。矩阵输入时常数 `c₀ = c_in + ½tr(X₂₂) − ½tr(h)`。
+（`A`、`B` 任意输入，构造时自动对称化——反对称部分在 Fock 代数中
+自动抵消）。矩阵输入时常数 `c₀ = c_in + ½tr(X₂₂) − ½tr(h)`。
 `exp(op)` 给 [`BosonicQuadraticOperatorExp`](@ref)。类型参数 `T<:Number}`
 是 block 的元素类型（构造时自动提升）。
 """
@@ -36,7 +33,7 @@ function BosonicQuadraticOperator(h, A, B; c0=0)
     n = size(h, 1); size(h, 2) == n || throw(ArgumentError("h 必须是方阵"))
     size(A) == (n, n) || throw(ArgumentError("A 尺寸应为 ($n,$n)"))
     size(B) == (n, n) || throw(ArgumentError("B 尺寸应为 ($n,$n)"))
-    _check_sym(A, "A"); _check_sym(B, "B")
+    A = symmetrize(A); B = symmetrize(B)
     return BosonicQuadraticOperator{T}(h, A, B, convert(T, c0))
 end
 
@@ -47,8 +44,7 @@ function BosonicQuadraticOperator(X::AbstractMatrix; c0=0)
     X11 = X[1:n, 1:n]; X12 = X[1:n, n+1:2n]
     X21 = X[n+1:2n, 1:n]; X22 = X[n+1:2n, n+1:2n]
     h = (X11 + transpose(X22)) / 2
-    A = (X12 + transpose(X12)) / 2
-    B = (X21 + transpose(X21)) / 2
+    A = symmetrize(X12); B = symmetrize(X21)
     c0b = c0 + tr(X22) / 2 - tr(h) / 2
     return BosonicQuadraticOperator(h, A, B; c0=c0b)
 end
@@ -104,7 +100,7 @@ function BosonicQuadraticHermitianOperator(h, A; c0=0)
     size(A) == (n, n) || throw(ArgumentError("A 尺寸应为 ($n,$n)"))
     _check_herm(h, "h")
     isreal(c0) || throw(ArgumentError("厄米算子的 c0 必须是实数"))
-    A = (A + transpose(A)) / 2          # 只有对称部分有效
+    A = symmetrize(A)                   # 只有对称部分有效
     return BosonicQuadraticHermitianOperator{T}(h, A, real(c0))
 end
 
@@ -116,7 +112,7 @@ function BosonicQuadraticHermitianOperator(X::AbstractMatrix; c0=0)
     X11 = X[1:n, 1:n]; X12 = X[1:n, n+1:2n]
     X21 = X[n+1:2n, 1:n]; X22 = X[n+1:2n, n+1:2n]
     h = (X11 + transpose(X22)) / 2
-    A = (X12 + transpose(X12)) / 2
+    A = symmetrize(X12)
     c0b = real(c0 + tr(X22) / 2 - tr(h) / 2)
     return BosonicQuadraticHermitianOperator(h, A; c0=c0b)
 end
