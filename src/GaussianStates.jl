@@ -30,7 +30,7 @@ export AbstractQuadraticOperator, AbstractFermionicQuadraticOperator,
        FermionicQuadraticGibbsState, BosonicQuadraticGibbsState,
        FermionicGaussianState, BosonicGaussianState,
        purify, GaussianState, partialtr, entropy, ispure, covariance, nmodes,
-       fockmatrix, bdg
+       fockmatrix, bdg, quadraticoperator
 
 include("abstract.jl")
 include("quadratic_fermion.jl")
@@ -42,5 +42,6 @@ include("purify_boson.jl")
 include("partialtr.jl")
 include("entropy.jl")
 include("fockmatrix.jl")
+include("inverse.jl")
 
 end # module

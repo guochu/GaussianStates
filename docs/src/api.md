@@ -50,6 +50,12 @@ covariance
 （反对称/对称、正定、谱约束），非法协方差抛 `ArgumentError`。
 日常入口仍是 `purify` / `partialtr` / `GaussianState(exp(H_herm))`。
 
+## 反推（协方差 → bdg）
+
+```@docs
+quadraticoperator
+```
+
 ## 偏迹与熵
 
 ```@docs

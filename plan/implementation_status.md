@@ -28,6 +28,20 @@
   `symmetrize`/`antisymmetrize` 自动投影（任意输入合法，Fock 代数下
   严格等价，测试用 fockmatrix + purify 协方差对拍固化）。
 
+## 2026-10-30 会话（五）：quadraticoperator 反推（协方差 → bdg）
+
+- **费米**（`src/inverse.jl`，已验证）：G=⟨c†c⟩、F=⟨cc⟩ 由 Γ 的直接
+  Majorana 公式给出，C = [[I−Gᵀ, F],[−F̄, G]]，**X = log(C⁻¹−I)**（符号
+  由 A≠0 稠密 Fock 仲裁钉死）；h=(X₁₁−X₂₂ᵀ)/2、A=antisym(X₁₂)；数值
+  厄米化保复厄米 h 的虚部（曾误用 real.() 抹掉 ±0.82i 的虚部）。
+  n=1..3 精确恢复 (h,A) + 往返；n=64 恢复误差 4e-14、6.6 ms。
+  纯态（|ν|=1）抛 ArgumentError。测试 +8。
+- **玻色：未实现**（调用抛 ErrorException），三条路线均不封闭：
+  ① Nambu C⁻¹−I 谱双侧跨越；② Williamson 组装 G=S⁻¹(⊕ε)S⁻ᵀ 对本征向量
+  相位敏感（n=1 数值证实：e^{iθ} 旋转给不同 G，θ=0 的 LAPACK 默认相位
+  恰好正确但无规范依据）；③ ΩG=g(ΩΣ) 不成立（[ΩΣ,ΩG]≠0，本征向量不同）。
+  正确构造需辛极分解/复结构路线，作为后续工作包。
+
 ## 2026-10-29 会话（四）：boundary-driven OSEE 端到端示例
 
 `docs/examples/boundary_driven_osee.jl`：n=6 链（随机在位+hopping）+ 两端
