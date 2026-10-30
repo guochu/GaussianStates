@@ -23,7 +23,7 @@
 #
 # 运行：cd docs/examples && julia --project=../.. boundary_driven_osee.jl
 # ============================================================================
-using LinearAlgebra, Random, Printf
+using LinearAlgebra, Random, Printf, SparseArrays
 let root = joinpath(@__DIR__, "..", "..")
     push!(LOAD_PATH, root)
 end
@@ -184,8 +184,9 @@ function main()
         @printf("%-6.2f %-10.6f %-10.6f %-10.2e %-12.2e %-12.2e\n",
                 t, Sf, Sd, abs(Sf - Sd), dΓ, dρ)
     end
-    @printf("\nmax |ΔOSEE| = %.2e, max |ΔΓ| = %.2e  →  %s\n", maxdS, maxdΓ,
+    @printf("\n[态] max |ΔOSEE| = %.2e, max |ΔΓ| = %.2e  →  %s\n", maxdS, maxdΓ,
             maxdS < 1e-8 && maxdΓ < 1e-9 ? "全程对齐 ✓" : "未对齐 ✗")
-    maxdS < 1e-8 && maxdΓ < 1e-9 || error("快速与稠密路径未对齐")
+    maxdS < 1e-8 && maxdΓ < 1e-9 || error("态的快速与稠密路径未对齐")
+
 end
 main()
