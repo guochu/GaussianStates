@@ -21,6 +21,22 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
         @test isapprox(entropy(Gb; α=2), log((1+t)/(1-t)); atol=1e-10)
     end
 
+    @testset "purity" begin
+        # 纯 TFD：Tr ρ² = 1
+        Hb = BosonicQuadraticHermitianOperator(
+            ComplexF64[-1.5 0.2; 0.2 -2.1], ComplexF64[0.1 -0.05; -0.05 0.08])
+        @test isapprox(purity(purify(exp(Hb))), 1.0; atol=1e-12)
+        # 单模热态解析：Σ = ½coth(ω/2)·I ⟹ Tr ρ² = tanh(ω/2)
+        ω = 0.8
+        Gb = GaussianState(exp(BosonicQuadraticHermitianOperator(
+            ComplexF64[-ω;;], ComplexF64[0.0;;])))
+        @test isapprox(purity(Gb), tanh(ω / 2); atol=1e-12)
+        # 稠密仲裁：压缩热态（截断极限）
+        Hs = BosonicQuadraticHermitianOperator(ComplexF64[-3.0;;], ComplexF64[0.8;;])
+        ρ = fockmatrix(exp(Hs); d=40); ρ ./= tr(ρ)
+        @test isapprox(purity(GaussianState(exp(Hs))), real(tr(ρ * ρ)); atol=5e-3)
+    end
+
     @testset "error paths" begin
         # 厄米性 / c0 实数校验
         @test_throws ArgumentError BosonicQuadraticHermitianOperator(

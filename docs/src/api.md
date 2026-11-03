@@ -43,6 +43,7 @@ BosonicGaussianState
 purify
 GaussianState
 ispure
+purity
 covariance
 ```
 

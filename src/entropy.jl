@@ -1,5 +1,5 @@
 # ============================================================================
-# entropy.jl —— 协方差熵内核与 entropy(gs[, modes])
+# entropy.jl —— 协方差谱内核：entropy(gs[, modes]) 与 purity(gs)
 # ============================================================================
 
 function _binary_entropy(ν::Real)
@@ -74,3 +74,26 @@ function entropy(s::AbstractGaussianState, modes::AbstractVector{<:Integer}; α:
     isempty(modes) && return 0.0
     return _entropy_at(s, _modeindices(modes), α)
 end
+
+# purity：Tr ρ²。谱的 ± 对（费米）/辛 ± 对（玻色）在全谱乘积中各计两次，
+# 开方即还原每模式一次（与 entropy 内核的 ÷2 同构）
+function _purity_fermionic(ΓA::AbstractMatrix{<:Real})
+    νs = abs.(eigvals(Hermitian(im .* ΓA)))
+    return sqrt(prod((1 .+ νs .^ 2) ./ 2))
+end
+
+function _purity_bosonic(ΣA::AbstractMatrix{<:Real}, ΩA::AbstractMatrix{<:Real})
+    νs = abs.(eigvals(ΩA * ΣA))
+    return sqrt(prod(1 ./ (2 .* νs)))
+end
+
+"""
+    purity(s::AbstractGaussianState) -> Float64
+
+整态纯度 `Tr ρ²`，由协方差谱解析给出：费米 `Πₖ(1 + νₖ²)/2`
+（`νₖ = |eig(iΓ)|`，成 ± 对）；玻色 `Πₖ 1/(2νₖ)`（`νₖ` 为辛本征值
+`|eig(ΩΣ)|`，物理态 `νₖ ≥ ½`）。纯态为 1。子系统纯度用
+`purity(partialtr(s, modes))`。
+"""
+purity(s::FermionicGaussianState) = _purity_fermionic(s.Γ)
+purity(s::BosonicGaussianState) = _purity_bosonic(s.Σ, _omega(nmodes(s)))

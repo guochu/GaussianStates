@@ -29,8 +29,8 @@ export AbstractQuadraticOperator, AbstractFermionicQuadraticOperator,
        FermionicQuadraticOperatorExp, BosonicQuadraticOperatorExp,
        FermionicQuadraticGibbsState, BosonicQuadraticGibbsState,
        FermionicGaussianState, BosonicGaussianState,
-       purify, GaussianState, partialtr, entropy, ispure, covariance, nmodes,
-       fockmatrix, bdg, quadraticoperator
+       purify, GaussianState, partialtr, entropy, ispure, purity, covariance,
+       nmodes, fockmatrix, bdg, quadraticoperator
 
 include("abstract.jl")
 include("quadratic_fermion.jl")

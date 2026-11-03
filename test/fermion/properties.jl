@@ -38,6 +38,28 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
         @test isapprox(entropy(G, [1]; α=2), S2dense; atol=1e-10)
     end
 
+    @testset "purity" begin
+        # 纯态 Tr ρ² = 1
+        psi = purify(exp(random_op(2, 7)))
+        @test isapprox(purity(psi), 1.0; atol=1e-12)
+        # 单模热态解析：f = 1/(1+e^ω)，Tr ρ² = f² + (1−f)²
+        ω = 0.9
+        G = GaussianState(exp(FermionicQuadraticHermitianOperator(
+            ComplexF64[-ω;;], zeros(ComplexF64, 1, 1))))
+        f = 1 / (1 + exp(ω))
+        @test isapprox(purity(G), f^2 + (1 - f)^2; atol=1e-12)
+        # 稠密仲裁：n=2 Gibbs 整态与子系统（partialtr 组合）
+        Hg = random_op(2, 3; herm=true)
+        G2 = GaussianState(exp(Hg))
+        ρ = fockmatrix(exp(Hg)); ρ ./= tr(ρ)
+        @test isapprox(purity(G2), real(tr(ρ * ρ)); atol=1e-10)
+        ρred = zeros(ComplexF64, 2, 2)
+        for n1 in 0:1, m1 in 0:1, n2 in 0:1
+            ρred[n1+1, m1+1] += ρ[n1 + 2n2 + 1, m1 + 2n2 + 1]
+        end
+        @test isapprox(purity(partialtr(G2, [1])), real(tr(ρred * ρred)); atol=1e-10)
+    end
+
     @testset "error paths" begin
         op = exp(random_op(2, 7))
         psi = purify(op)
