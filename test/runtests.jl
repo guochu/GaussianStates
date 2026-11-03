@@ -3,9 +3,9 @@ using Test
 
 @testset "GaussianStates v7" begin
     for f in ("fermion/operators.jl", "fermion/purify.jl", "fermion/gibbs.jl",
-              "fermion/properties.jl", "fermion/inverse.jl",
+              "fermion/properties.jl", "fermion/inverse.jl", "fermion/transforms.jl",
               "boson/gibbs.jl", "boson/purify.jl", "boson/tfd.jl",
-              "boson/properties.jl", "boson/inverse.jl")
+              "boson/properties.jl", "boson/inverse.jl", "boson/transforms.jl")
         include(f)
     end
 end
