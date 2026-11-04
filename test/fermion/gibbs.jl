@@ -26,4 +26,16 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
             @test maximum(abs.(covariance(red) - covariance(rho))) < 1e-10
         end
     end
+
+    @testset "covariance & direct constructor" begin
+        for (n, seed) in ((1,1),(2,3),(3,2))
+            gs = exp(random_op(n, seed; herm=true))
+            Γ = covariance(gs)                       # Gibbs 态直接给协方差
+            @test Γ isa Matrix{Float64}
+            @test size(Γ) == (2n, 2n)
+            @test maximum(abs.(Γ - covariance(GaussianState(gs)))) < 1e-12
+            # 直接构造与 GaussianState(gs) 等价
+            @test maximum(abs.(covariance(FermionicGaussianState(gs)) - Γ)) < 1e-12
+        end
+    end
 end

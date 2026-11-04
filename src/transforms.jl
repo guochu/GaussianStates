@@ -1,7 +1,8 @@
 # ============================================================================
-# transforms.jl —— Bogoliubov (Nambu) 协方差 ↔ Majorana / (x,p) 协方差
+# transforms.jl —— Nambu (Bogoliubov) 协方差 ↔ Majorana / (x,p) 协方差
 #
-# 非导出函数；只在 purify / GaussianState(Gibbs) 内部使用。
+# 算子 block 与协方差两套表象之间的桥（对照表见 docs 手册"表象"一节）。
+# 非导出函数；只在 purify / covariance(Gibbs) 内部使用。
 # ============================================================================
 
 # Nambu 协方差 C_ab = ⟨Ψ_a Ψ_b†⟩, Ψ=(c,c†)

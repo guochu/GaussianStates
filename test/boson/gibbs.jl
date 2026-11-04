@@ -39,4 +39,14 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
         @test_throws ArgumentError GaussianState(exp(
             BosonicQuadraticHermitianOperator(ComplexF64[-1.0;;], ComplexF64[2.0;;])))
     end
+
+    @testset "covariance & direct constructor" begin
+        ω = 0.7
+        gs = exp(BosonicQuadraticHermitianOperator([-ω;;], [0.0;;]))
+        Σ = covariance(gs)                           # Gibbs 态直接给协方差
+        @test Σ isa Matrix{Float64}
+        @test maximum(abs.(Σ - 0.5 / tanh(ω / 2) .* Matrix{Float64}(I, 2, 2))) < 1e-10
+        # 直接构造与 GaussianState(gs) 等价
+        @test maximum(abs.(covariance(BosonicGaussianState(gs)) - Σ)) < 1e-12
+    end
 end

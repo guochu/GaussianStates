@@ -15,7 +15,10 @@
 `GaussianState(gs)` 直接取混合 Gibbs 协方差，`purify(gs)` 给 TFD。
 
 OSEE 的唯一写法是 `entropy(purify(exp(H)), modes)`（`purify` 只算一次）；
-态只存实协方差（Majorana / (x,p)），不开放直接构造。
+态只存实协方差（Majorana / (x,p)），不开放直接构造。表象约定：算子
+block（`bdg`）在 Nambu 基 `Ψ=(c,c†)`/`(a,a†)`，态协方差在 Majorana
+（费米）/ (x,p) 四极（玻色）基——两套表象不同，不能直接混用
+（基矢对照表见手册"表象"一节）。
 """
 module GaussianStates
 

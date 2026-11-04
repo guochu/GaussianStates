@@ -20,7 +20,9 @@ end
     FermionicGaussianState(Γ)
 
 费米高斯态：只存实 Majorana 协方差 `Γ`（2N×2N 反对称，
-`Γ_ab = i⟨γ_aγ_b⟩`）。构造器校验：实反对称且 `|eig(iΓ)| ≤ 1`。
+`Γ_ab = i⟨γ_aγ_b⟩`）。基矢 `γ₂ₘ₋₁ = cₘ + cₘ†`、`γ₂ₘ = i(cₘ† − cₘ)`，
+模式 `m` 占相邻指标 `[2m−1, 2m]`。构造器校验：实反对称且
+`|eig(iΓ)| ≤ 1`。表象与算子 block 的 Nambu 基不同（见 `bdg`）。
 通常由 `purify` / `partialtr` / `GaussianState(Gibbs)` 产生。
 """
 struct FermionicGaussianState <: AbstractFermionicGaussianState
@@ -43,8 +45,10 @@ FermionicGaussianState(Γ::AbstractMatrix) = FermionicGaussianState(convert(Matr
     BosonicGaussianState(Σ)
 
 玻色高斯态：只存实 (x,p) 协方差 `Σ`（2N×2N 对称正定，
-`Σ_ab = ½⟨{R_a,R_b}⟩`）。构造器校验：实对称、正定（不可归一化的
-Choi "态"会给负定协方差）、辛本征值 `ν ≥ ½`。
+`Σ_ab = ½⟨{R_a,R_b}⟩`）。基矢 `R = (x₁,p₁,…)`，`xₘ = (aₘ+aₘ†)/√2`、
+`pₘ = i(aₘ†−aₘ)/√2`，模式 `m` 占相邻指标 `[2m−1, 2m]`。构造器校验：
+实对称、正定（不可归一化的 Choi "态"会给负定协方差）、辛本征值
+`ν ≥ ½`。表象与算子 block 的 Nambu 基不同（见 `bdg`）。
 通常由 `purify` / `partialtr` / `GaussianState(Gibbs)` 产生。
 """
 struct BosonicGaussianState <: AbstractBosonicGaussianState
@@ -59,14 +63,29 @@ struct BosonicGaussianState <: AbstractBosonicGaussianState
             throw(ArgumentError("玻色协方差不是物理的：不正定（不可归一化？）"))
         N = m ÷ 2
         ν = abs.(eigvals(_omega(N) * Σ))
-        minimum(ν; init=Inf) ≥ 0.5 - 1e-8 ||
+        # 容差 1e-6：边界情形（如 Choi 态趋近 |I⟩_G 时 ν→½）的补全数值误差 ~1e-8，
+        # 真实的非物理态（热态温度为负等）违例远大于此
+        minimum(ν; init=Inf) ≥ 0.5 - 1e-6 ||
             throw(ArgumentError("玻色协方差不是物理的：νmin = $(minimum(ν)) < 1/2"))
         return new(Σ)
     end
 end
 BosonicGaussianState(Σ::AbstractMatrix) = BosonicGaussianState(convert(Matrix{Float64}, Σ))
 
-"态的实协方差：费米 `Γ = i⟨γγ⟩`（Majorana），玻色 `Σ = ½⟨{R,R}⟩`（xp）。"
+"""
+    covariance(s::AbstractGaussianState) -> Matrix{Float64}
+
+态的实协方差（**Majorana / (x,p) 表象**，与算子 block 的 Nambu 表象
+不同，见 `bdg`）：
+
+- 费米 `Γ_ab = i⟨γ_aγ_b⟩`：Majorana 基 `γ₂ₘ₋₁ = cₘ + cₘ†`、
+  `γ₂ₘ = i(cₘ† − cₘ)`，模式 `m` 占相邻指标 `[2m−1, 2m]`；实反对称。
+- 玻色 `Σ_ab = ½⟨{R_a,R_b}⟩`：四极基 `R = (x₁,p₁,…)`，
+  `xₘ = (aₘ+aₘ†)/√2`、`pₘ = i(aₘ†−aₘ)/√2`，模式 `m` 占相邻指标
+  `[2m−1, 2m]`；实对称正定。
+
+物理模式 `p` 对应行/列指标 `[2p−1, 2p]`。
+"""
 covariance(s::FermionicGaussianState) = s.Γ
 covariance(s::BosonicGaussianState)   = s.Σ
 

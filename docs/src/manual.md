@@ -1,7 +1,8 @@
 # 理论与算法
 
-本页给出 v7 API 的约定与算法：二次型 block 与 `c₀`、协方差表示、
-`purify`（费米/玻色）、`GaussianState`（Gibbs）、TFD、熵与偏迹。
+本页给出 v7 API 的约定与算法：二次型 block 与 `c₀`、表象对照
+（算子 Nambu vs 协方差 Majorana/(x,p)）、`purify`（费米/玻色）、
+`GaussianState`（Gibbs）、TFD、熵与偏迹。
 所有关键公式都用稠密 Fock 构造逐元素仲裁验证（`test/runtests.jl`，
 误差 1e-10 ~ 1e-16）。
 
@@ -50,20 +51,32 @@ X = ⎡ h   A ⎤ ,    ½Ψ†XΨ = a†ha + ½a†Aa† + ½aBa + ½tr(h)
 `GaussianState`/`purify` 抛 `ArgumentError`（判据是 Bogoliubov 生成元的
 σ₃ 符号结构，谱全实本身不保证稳定）。
 
-## 2. 态的协方差表示（内部）
+## 2. 两种表象：算子 block（Nambu）与态协方差（Majorana / (x,p)）
 
-`GaussianState` 只存实协方差，不存 bdg/M 矩阵：
+本包的**算子矩阵与协方差矩阵定义在不同的表象下**——基矢与排列顺序
+都不同，二者不能直接相乘或逐元素比较：
 
-```text
-费米：Γ_ab = i⟨γ_aγ_b⟩      2N×2N 实反对称，γ_{2m−1} = c_m + c_m†，γ_{2m} = i(c_m† − c_m)
-玻色：Σ_ab = ½⟨{R_a,R_b}⟩   2N×2N 实对称正定，R = (x₁,p₁,x₂,p₂,…)，x = (a+a†)/√2
-```
+| 矩阵 | 表象与基矢顺序 | 基矢定义 | 矩阵性质 |
+|---|---|---|---|
+| 费米 `X = bdg(op)`（block `h,A,B`） | Nambu `Ψ = (c₁..cₙ, c₁†..cₙ†)`：湮灭全体在前、产生全体在后 | `cₘ`：Fock 湮灭算符 | `[[h,A],[B,−hᵀ]]`，2n×2n 复；厄米算子 `X = X†` |
+| 费米 `Γ = covariance(s)` | Majorana `(γ₁..γ₂ₙ)`：模式 `m` 占相邻指标 `[2m−1, 2m]` | `γ₂ₘ₋₁ = cₘ + cₘ†`，`γ₂ₘ = i(cₘ† − cₘ)` | `Γ_ab = i⟨γ_aγ_b⟩`，2n×2n 实反对称，`|eig(iΓ)| ≤ 1` |
+| 玻色 `X = bdg(op)`（block `h,A,B`） | Nambu `Ψ = (a₁..aₙ, a₁†..aₙ†)`：湮灭全体在前、产生全体在后 | `aₘ`：Fock 湮灭算符 | `[[h,A],[B,hᵀ]]`，2n×2n 复；厄米算子 `X = X†` |
+| 玻色 `Σ = covariance(s)` | 四极 `R = (x₁,p₁,x₂,p₂,…)`：模式 `m` 占相邻指标 `[2m−1, 2m]` | `xₘ = (aₘ+aₘ†)/√2`，`pₘ = i(aₘ†−aₘ)/√2` | `Σ_ab = ½⟨{R_a,R_b}⟩`，2n×2n 实对称正定，辛本征值 `ν ≥ ½` |
 
-用哪种基是内部约定（`to_majorana` / `to_xp` 及其逆 `to_nambu` /
-`to_bogoliubov` 不导出；反解分别用恒等式 `⟨γ_aγ_b⟩ = I − iΓ`
-（对称部分被 CAR `{γ_a,γ_b}=2δ` 钉死）与 `W` 的幺正性）。纯态判据：
-费米 `Γ² = −I`；玻色辛本征值全 `½`（`ispure`）。物理模式 `p` 对应
-协方差指标 `[2p−1, 2p]`；`partialtr` 取子矩阵，`entropy` 在子矩阵上算。
+`GaussianState` 只存右列两种实协方差，不存 bdg/M 矩阵。注意**排序
+不同**：Nambu 基把湮灭/产生各 `n` 个分居前后；Majorana / (x,p) 基按
+模式交错——这也是 `partialtr` / `entropy` 的 `modes` 约定（物理模式
+`p` ↔ 协方差指标 `[2p−1, 2p]`）。纯态判据：费米 `Γ² = −I`；玻色
+辛本征值全 `½`（`ispure`）。
+
+**中间量与换算**：`covariance(gs)` / `purify` 内部先在 Nambu 表象组装
+Nambu 协方差 `C_ab = ⟨Ψ_aΨ_b†⟩`（费米）/ `C_ab = ½⟨{Ψ_a,Ψ_b†}⟩`
+（玻色），再经 `to_majorana` / `to_xp` 转出（内部函数，不导出；逆
+`to_nambu` / `to_bogoliubov`，反解用恒等式 `⟨γ_aγ_b⟩ = I − iΓ`——
+对称部分被 CAR `{γ_a,γ_b}=2δ` 钉死——与 `W` 的幺正性）。用户侧的
+跨表象入口只有两个，内部已自动换算：`covariance(gs)`（`bdg` 的
+Nambu → Majorana/(x,p)）与 `quadraticoperator(s)`（协方差 → Nambu
+`(h,A)`）。
 
 `GaussianState` 不开放从协方差直接构造：纯态用 `purify(exp(H))`，
 混合态用 `partialtr`，厄米 Gibbs 态用 `GaussianState(exp(H_herm))`。

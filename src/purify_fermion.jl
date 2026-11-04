@@ -116,16 +116,35 @@ function purify(e::FermionicQuadraticOperatorExp)
 end
 
 """
+    covariance(gs::FermionicQuadraticGibbsState) -> Matrix{Float64}
+
+厄米 `e^H` Gibbs 态的实 Majorana 协方差（n 模，混合）：本征基下
+Nambu 协方差 `C = (I + e^X)^{-1}`（`X = bdg(op)`，Nambu 表象）经
+`to_majorana` 转到 **Majorana 表象**输出（与
+`covariance(::FermionicGaussianState)` 同表象；非 `bdg` 的 Nambu 表象）。
+不做物理性校验（校验在 `FermionicGaussianState` 构造器里）。
+"""
+function covariance(gs::FermionicQuadraticGibbsState)
+    X = bdg(gs.op)
+    F = eigen(Hermitian(X))
+    C = F.vectors * Diagonal(1 ./ (1 .+ exp.(F.values))) * adjoint(F.vectors)
+    return to_majorana(C)
+end
+
+"""
+    FermionicGaussianState(gs::FermionicQuadraticGibbsState)
+
+厄米 `e^H` 的 Gibbs 态（n 模，混合）；等价于 `GaussianState(gs)`。
+"""
+FermionicGaussianState(gs::FermionicQuadraticGibbsState) =
+    FermionicGaussianState(covariance(gs))
+
+"""
     GaussianState(gs::FermionicQuadraticGibbsState) -> FermionicGaussianState
 
 厄米 `e^H` 的 Gibbs 态（n 模，混合）。
 """
-function GaussianState(gs::FermionicQuadraticGibbsState)
-    X = bdg(gs.op)
-    F = eigen(Hermitian(X))
-    C = F.vectors * Diagonal(1 ./ (1 .+ exp.(F.values))) * adjoint(F.vectors)
-    return FermionicGaussianState(to_majorana(C))
-end
+GaussianState(gs::FermionicQuadraticGibbsState) = FermionicGaussianState(gs)
 
 """
     purify(gs::FermionicQuadraticGibbsState) -> FermionicGaussianState

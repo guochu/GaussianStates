@@ -41,6 +41,16 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
         # 厄米性 / c0 实数校验
         @test_throws ArgumentError BosonicQuadraticHermitianOperator(
             rand(2,2) + im .* rand(2,2), zeros(ComplexF64,2,2); c0=im)
+        # c0：任意数值输入只查虚部为 0，存储类型固化为 T
+        Hb = BosonicQuadraticHermitianOperator(
+            ComplexF64[-1.5 0.2; 0.2 -2.1], ComplexF64[0.1 -0.05; -0.05 0.08]; c0=0.5 + 0.0im)
+        @test Hb.c0 === 0.5 + 0.0im                 # T = ComplexF64
+        Hr = BosonicQuadraticHermitianOperator(
+            [0.5 0.2; 0.2 -0.3], [0.1 0.0; 0.0 0.2]; c0=2)
+        @test Hr.c0 === 2.0                          # T = Float64
+        @test_throws ArgumentError BosonicQuadraticHermitianOperator(
+            ComplexF64[-1.5 0.2; 0.2 -2.1], ComplexF64[0.1 -0.05; -0.05 0.08]; c0=1 + im)
+        @test_throws ArgumentError BosonicQuadraticHermitianOperator(bdg(Hb); c0=im)
         # 非物理协方差
         @test_throws ArgumentError BosonicGaussianState(ones(2, 2))                   # ν < 1/2
         @test_throws ArgumentError BosonicGaussianState(-Matrix{Float64}(I,2,2))       # 不正定

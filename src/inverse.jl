@@ -17,7 +17,9 @@
     quadraticoperator(s::FermionicGaussianState) -> FermionicQuadraticHermitianOperator
 
 反推：给定高斯态的协方差，假定它是某个二次型 Gibbs 态 `e^H/tr`
-（满秩），O(n³) 重建 bdg 矩阵的 `(h, A)`。满足
+（满秩），O(n³) 重建 bdg 矩阵的 `(h, A)`。跨表象换算：输入 `Γ`/`Σ`
+在 Majorana/(x,p) 表象（`covariance`），输出 `(h, A)` 在 Nambu 表象
+（`bdg`）。满足
 `GaussianState(exp(quadraticoperator(s))) == s` 与精确恢复输入 `(h, A)`
 （往返测试固化）。`c₀` 与协方差无关，返回 0；纯态（费米 |ν|=1、
 玻色 ν=1/2）不是任何满秩 Gibbs 态的协方差，对数发散，抛 `ArgumentError`。

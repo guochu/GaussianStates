@@ -28,4 +28,20 @@ include(joinpath(dirname(@__FILE__), "..", "helpers.jl"))
         Hh = FermionicQuadraticHermitianOperator((h + h') / 2, Ah)
         @test Hh.A ≈ GS.antisymmetrize(Ah)
     end
+
+    @testset "hermitian c0 typing" begin
+        rng = MersenneTwister(31)
+        h = randn(rng, ComplexF64, 3, 3); h = (h + h') / 2
+        A = GS.antisymmetrize(randn(rng, ComplexF64, 3, 3))
+        # c0 任意数值输入、虚部为 0 即可；存储类型固化为 T
+        H = FermionicQuadraticHermitianOperator(h, A; c0=0.7 + 0.0im)
+        @test H.c0 === 0.7 + 0.0im                  # T = ComplexF64
+        Hr = FermionicQuadraticHermitianOperator(
+            [0.5 0.2; 0.2 -0.3], [0.0 0.1; -0.1 0.0]; c0=2)
+        @test Hr.c0 === 2.0                          # T = Float64
+        @test_throws ArgumentError FermionicQuadraticHermitianOperator(h, A; c0=1 + im)
+        # X 矩阵输入同校验
+        @test FermionicQuadraticHermitianOperator(bdg(H); c0=0.5 + 0.0im).c0 isa ComplexF64
+        @test_throws ArgumentError FermionicQuadraticHermitianOperator(bdg(H); c0=im)
+    end
 end

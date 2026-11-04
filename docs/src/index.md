@@ -15,6 +15,10 @@ GaussianStates
   全部走协方差快速算法（每割 O(模式数³)），不构造稠密矩阵。
 - **OSEE**：`entropy(purify(exp(H)), modes)`——`purify` 只算一次、复用返回值。
 
+表象约定：算子 block（`bdg`）在 Nambu 基 `Ψ=(c,c†)`/`(a,a†)`，态
+协方差在 Majorana（费米）/ (x,p) 四极（玻色）基——两套表象的基矢与
+顺序都不同，不能直接混用；矩阵×基矢对照表见[理论与算法](@ref)。
+
 ## 安装与加载
 
 本包位于 `Missile/GaussianStates`（本地包，暂未注册）。把仓库路径加入

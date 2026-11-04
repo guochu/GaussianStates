@@ -19,6 +19,10 @@ symmetrize(M::AbstractMatrix) = (M + transpose(M)) / 2
 自动抵消）。矩阵输入时常数 `c₀ = c_in + ½tr(X₂₂) − ½tr(h)`。
 `exp(op)` 给 [`BosonicQuadraticOperatorExp`](@ref)。类型参数 `T<:Number}`
 是 block 的元素类型（构造时自动提升）。
+
+block（与 `bdg`）定义在 **Nambu 表象** `Ψ = (a₁..aₙ, a₁†..aₙ†)`
+（湮灭全体在前、产生全体在后）；态协方差是另一套表象（(x,p) 四极，
+见 `covariance`），两者基矢与顺序都不同，不能直接混用。
 """
 struct BosonicQuadraticOperator{T<:Number} <: AbstractBosonicQuadraticOperator{T}
     h  :: Matrix{T}
@@ -74,6 +78,8 @@ end
     BosonicQuadraticHermitianOperator(X; c0=0)
 
 厄米玻色二次型（`h` 厄米、`A` 复对称、`B = A†` 由 `.B` 合成，不存储）。
+`c₀` 任意数值输入，只要求虚部为 0，存储类型固化为 `T`（不参与提升）。
+block 在 Nambu 表象（`bdg`）；态协方差表象见 `covariance`。
 `exp(op)` 给 Gibbs 态 [`BosonicQuadraticGibbsState`](@ref)。
 **注意指数约定**：热态应传 `H = −β·H_sys`（`h ≈ −βω < 0`）；`e^H`
 无界/失稳时抛 `ArgumentError`。
@@ -81,7 +87,7 @@ end
 struct BosonicQuadraticHermitianOperator{T<:Number} <: AbstractBosonicQuadraticOperator{T}
     h  :: Matrix{T}
     A  :: Matrix{T}
-    c0 :: Real
+    c0 :: T
 end
 
 # .B = A† 对齐一般算子接口
@@ -99,15 +105,16 @@ function BosonicQuadraticHermitianOperator(h, A; c0=0)
     n = size(h, 1); size(h, 2) == n || throw(ArgumentError("h 必须是方阵"))
     size(A) == (n, n) || throw(ArgumentError("A 尺寸应为 ($n,$n)"))
     _check_herm(h, "h")
-    isreal(c0) || throw(ArgumentError("厄米算子的 c0 必须是实数"))
+    isreal(c0) || throw(ArgumentError("厄米算子的 c0 虚部必须为 0"))
     A = symmetrize(A)                   # 只有对称部分有效
-    return BosonicQuadraticHermitianOperator{T}(h, A, real(c0))
+    return BosonicQuadraticHermitianOperator{T}(h, A, convert(T, real(c0)))
 end
 
 function BosonicQuadraticHermitianOperator(X::AbstractMatrix; c0=0)
     m, n2 = size(X); m == n2 || throw(ArgumentError("X 必须是方阵"))
     iseven(m) || throw(ArgumentError("X 的维数必须是偶数"))
     _check_herm(X, "X")
+    isreal(c0) || throw(ArgumentError("厄米算子的 c0 虚部必须为 0"))
     n = m ÷ 2
     X11 = X[1:n, 1:n]; X12 = X[1:n, n+1:2n]
     X21 = X[n+1:2n, 1:n]; X22 = X[n+1:2n, n+1:2n]
@@ -130,7 +137,8 @@ Base.:/(op::BosonicQuadraticHermitianOperator, s::Number) =
     BosonicQuadraticGibbsState(op)
 
 厄米玻色 `e^H`：归一化后是 Gibbs 密度矩阵（要求 H_sys 有下界）。
-`GaussianState(gs)` 给混合 Gibbs 态，`purify(gs)` 给 TFD。
+`GaussianState(gs)`（即 `BosonicGaussianState(gs)`）给混合 Gibbs 态，
+`purify(gs)` 给 TFD。
 """
 struct BosonicQuadraticGibbsState{T<:Number} <: AbstractQuadraticGibbsState{T}
     op :: BosonicQuadraticHermitianOperator{T}

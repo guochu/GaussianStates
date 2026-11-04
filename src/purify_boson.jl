@@ -71,13 +71,30 @@ function _boson_gibbs_C(h::AbstractMatrix, A::AbstractMatrix)
 end
 
 """
+    covariance(gs::BosonicQuadraticGibbsState) -> Matrix{Float64}
+
+厄米 `e^H` Gibbs 态的实 (x,p) 协方差（n 模，混合）：Bogoliubov 组装
+Nambu 协方差 `C` 后 `Σ = to_xp(C)`，输出在 **(x,p) 表象**（与
+`covariance(::BosonicGaussianState)` 同表象；非 `bdg` 的 Nambu 表象）。
+不做物理性校验（校验在 `BosonicGaussianState` 构造器里；
+不可归一化/失稳由组装过程抛 `ArgumentError`）。
+"""
+covariance(gs::BosonicQuadraticGibbsState) = to_xp(_boson_gibbs_C(gs.op.h, gs.op.A))
+
+"""
+    BosonicGaussianState(gs::BosonicQuadraticGibbsState)
+
+厄米 `e^H` 的 Gibbs 态（n 模，混合）；等价于 `GaussianState(gs)`。
+"""
+BosonicGaussianState(gs::BosonicQuadraticGibbsState) =
+    BosonicGaussianState(covariance(gs))
+
+"""
     GaussianState(gs::BosonicQuadraticGibbsState) -> BosonicGaussianState
 
 厄米 `e^H` 的 Gibbs 态（n 模，混合）。Bogoliubov 组装协方差，Σ = to_xp(C)。
 """
-function GaussianState(gs::BosonicQuadraticGibbsState)
-    return BosonicGaussianState(to_xp(_boson_gibbs_C(gs.op.h, gs.op.A)))
-end
+GaussianState(gs::BosonicQuadraticGibbsState) = BosonicGaussianState(gs)
 
 """
     purify(e::BosonicQuadraticOperatorExp) -> BosonicGaussianState
